@@ -1,1 +1,1 @@
-# hethongchatbot
+npm run dev:backend
