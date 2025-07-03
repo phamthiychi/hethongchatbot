@@ -104,3 +104,24 @@ button:hover {
 .dropdown-item:hover {
   background-color: #f8f9fa;
 }
+
+body {
+  background-image: url(''); /* 👉 Thêm URL ảnh nền ở đây */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+  backdrop-filter: brightness(0.96);
+}
+
+.card,
+.form-container,
+.modal-content {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.card-title {
+  font-weight: bold;
+}

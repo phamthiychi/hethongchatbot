@@ -21,7 +21,7 @@ function basicAuth(req, res, next) {
   const USERNAME = 'ychi';
   const PASSWORD = 'Chi@2025';
   if (!credentials || credentials.name !== USERNAME || credentials.pass !== PASSWORD) {
-    res.set('WWW-Authenticate', 'Basic realm="VLE Admin"');
+    res.set('WWW-Authenticate', 'Basic realm="HE THONG TRA LOI CAU HOI TIN HOC"');
     return res.status(401).send('Access denied');
   }
   next();

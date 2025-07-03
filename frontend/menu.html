@@ -1,24 +1,79 @@
-<!-- Navbar Menu -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trường Tiểu học Huỳnh Mẫn Đạt</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .top-banner {
+      background: linear-gradient(to right, #f0e0c0, #cce6ff, #f0e0c0);
+      padding: 20px 0;
+      text-align: center;
+    }
+    .top-banner img.logo {
+      height: 100px;
+    }
+    .top-banner .school-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: red;
+    }
+    .top-banner .sub-title {
+      color: #0066cc;
+      font-weight: bold;
+    }
+    .top-banner .right-image img {
+      height: 100px;
+      object-fit: cover;
+    }
+    .navbar-custom {
+      background-color: #1900c2;
+    }
+    .navbar-custom .nav-link {
+      color: white !important;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-  <div class="container">
-    <a class="navbar-brand" href="/">VLE Admin</a>
-    <button class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarMenu"
-            aria-controls="navbarMenu"
-            aria-expanded="false"
-            aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse justify-content-end" id="navbarMenu">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" href="/dasboard">📋 Trang chủ</a></li>
-        <li class="nav-item"><a class="nav-link" href="/admin">➕ Thêm câu hỏi</a></li>
-        <li class="nav-item"><a class="nav-link" href="/addCate">➕ Thêm danh mục</a></li>
-      </ul>
+  <!-- Phần banner đầu -->
+  <div class="container-fluid top-banner">
+    <div class="row align-items-center text-center">
+      <div class="col-md-2">
+        <img src="https://84865018f0.vws.vegacdn.vn/UploadImages/Config/thhuynhmandat/logo trường.png" alt="Logo trường" class="logo">
+      </div>
+      <div class="col-md-8">
+        <div class="sub-title">HỆ THỐNG HỎI ĐÁP HỌC TẬP MÔN TIN HỌC</div>
+        <div class="school-title">TRƯỜNG TIỂU HỌC HUỲNH MẪN ĐẠT</div>
+      </div>
+      <div class="col-md-2 right-image">
+        <div>Khối Tiểu Học</div>
+        <img src="https://84865018f0.vws.vegacdn.vn/uploadimages/config/2024/thhuynhmandat/z5836472179857010b99b13fc4e86e5c43b264a0a9ee3b_16920241629.jpg" alt="Tập thể giáo viên">
+      </div>
     </div>
   </div>
-</nav>
+
+  <!-- Menu điều hướng -->
+  <nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link text-white" href="https://thhuynhmandat.hcm.edu.vn/homegd3"><i class="bi bi-info-circle"></i> THÔNG TIN VỀ TRƯỜNG</a></li>
+          <li class="nav-item"><a class="nav-link" href="/dasboard"></i>🏠 TRANG CHỦ</a></li>
+          <li class="nav-item"><a class="nav-link" href="/admin"></i>➕ THÊM CÂU HỎI</a></li>
+          <li class="nav-item"><a class="nav-link" href="/addCate"></i>📋 THÊM DANH MỤC</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+</body>
+</html>

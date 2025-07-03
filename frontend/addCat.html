@@ -17,22 +17,33 @@ fetch("/menu.html")
     document.getElementById("menuContainer").innerHTML = data;
   });
 </script>
-<form id="danhmucForm" class="d-flex flex-column justify-content-center align-items-center mt-3">
-  <input id="danhmucInput" class="form-control w-50" placeholder="Nhập tên danh mục" required />
-  <button type="submit" class="btn btn-success ms-2">➕ Thêm</button>
-</form>
 
-<table id="danhmucTable" class="table table-bordered">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Tên Danh mục</th>
-      <th>Hành động</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-<div class="d-flex justify-content-center mt-3" id="paginationControls"></div>
-</body>
- <script src="/main.js"></script>
+ <div class="container mt-4">
+  <form id="danhmucForm" class="d-flex justify-content-center align-items-center mb-4">
+    <input id="danhmucInput" class="form-control w-50" placeholder="Nhập tên danh mục" required />
+    <button type="submit" class="btn bg-white ms-2 fs-4" title="Thêm danh mục">
+      📥
+    </button>
+  </form>
+
+  <!-- Bảng danh mục -->
+  <div class="table-responsive">
+    <table id="danhmucTable" class="table table-bordered text-center align-middle">
+      <thead class="table-primary">
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Tên Danh mục</th>
+          <th scope="col">Hành động</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Phân trang -->
+  <div class="d-flex justify-content-center mt-3" id="paginationControls"></div>
+</div>
+
+<!-- Script -->
+<script src="/main.js"></script>
 </html>

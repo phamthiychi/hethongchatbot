@@ -59,8 +59,8 @@ function renderTable() {
       <td>${item.danhmuc}</td>
       <td class="cauhoi" data-id="${item.id}">${item.cauhoi}</td>
       <td class="traloi" data-id="${item.id}">${item.cautraloi}</td>
-      <td><button class="btn btn-sm btn-danger" data-id="${item.id}" data-action="delete">🗑 Xoá</button></td>
-      <td><button class="btn btn-sm btn-primary" data-action="edit">✏️ Sửa</button></td>
+      <td><button class="btn bg-white ms-1 fs-6" data-id="${item.id}" data-action="delete">🗑</button></td>
+      <td><button class="btn bg-white ms-1 fs-6" data-action="edit">🖌️</button></td>
     `;
     tbody.appendChild(row);
   });
@@ -138,7 +138,7 @@ function deleteQuestion(id) {
 
 function toggleEditRow(button) {
   const row = button.closest('tr');
-  const isEditing = button.textContent.includes('Lưu');
+  const isEditing = button.textContent.includes('💾');
   const cauhoiCell = row.querySelector('.cauhoi');
   const traloiCell = row.querySelector('.traloi');
 
@@ -157,7 +157,7 @@ function toggleEditRow(button) {
         if (data.success) {
           cauhoiCell.contentEditable = false;
           traloiCell.contentEditable = false;
-          button.textContent = '✏️ Sửa';
+          button.textContent = '🖌️';
         } else {
           alert('❌ Lỗi khi lưu dữ liệu');
         }
@@ -166,7 +166,7 @@ function toggleEditRow(button) {
     cauhoiCell.contentEditable = true;
     traloiCell.contentEditable = true;
     cauhoiCell.focus();
-    button.textContent = '💾 Lưu';
+    button.textContent = '💾';
   }
 }
 
@@ -206,8 +206,8 @@ function loadDanhMucList() {
         <td>${index +1}</td>
         <td class="danhmuc-name" data-id="${item.id}">${item.ten}</td>
         <td>
-            <button class="btn btn-sm btn-primary" data-action="edit-danhmuc">✏️ Sửa</button>
-            <button class="btn btn-sm btn-danger" data-action="delete-danhmuc">🗑 Xóa</button>
+            <button class="btn bg-white ms-1 fs-6" data-action="edit-danhmuc">🖌️</button>
+            <button class="btn bg-white ms-1 fs-6" data-action="delete-danhmuc">🗑</button>
         </td>`;
       tbody.appendChild(tr);
     });
@@ -235,7 +235,7 @@ function deleteDanhMuc(id) {
 function editDanhMuc(button) {
   const row = button.closest('tr');
   const tenCell = row.querySelector('.danhmuc-name');
-  const isEditing = button.textContent.includes('Lưu');
+  const isEditing = button.textContent.includes('💾');
 
   if (isEditing) {
     const id = tenCell.getAttribute('data-id');
@@ -250,7 +250,7 @@ function editDanhMuc(button) {
       .then(data => {
         if (data.success) {
           tenCell.contentEditable = false;
-          button.textContent = '✏️ Sửa';
+          button.textContent = '🖌️';
         } else {
           alert('❌ Lỗi khi cập nhật danh mục!');
         }
@@ -258,7 +258,7 @@ function editDanhMuc(button) {
   } else {
     tenCell.contentEditable = true;
     tenCell.focus();
-    button.textContent = '💾 Lưu';
+    button.textContent = '💾';
   }
 }
 
