@@ -18,7 +18,7 @@
     "mysql2": "^3.14.1"
   },
   "devDependencies": {
-    "live-server": "^1.2.2",
+    "live-server": "^1.2.0",
     "nodemon": "^3.1.10"
   }
 }

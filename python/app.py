@@ -149,7 +149,7 @@ async def chat(payload: ChatPayload, request: Request):
     qa_pairs = get_cached_qa_pairs()
     
     if not qa_pairs:
-        return {"response": "Không thể tải dữ liệu từ MySQL."}
+        score = 0
     answer, score, matched_index = find_best_match(user_message, qa_pairs)
 
     logger.info(f"🔍 TF-IDF score: {score:.2f} | {user_message}")
@@ -171,6 +171,7 @@ async def chat(payload: ChatPayload, request: Request):
         # Khi GPT tạo câu trả lời
         try:
             context = payload.messages[-3:] if len(payload.messages) > 3 else payload.messages
+            print(context)
             completion = client.chat.completions.create(model="gpt-4o-mini", messages=context)
 
             reply = completion.choices[0].message.content
@@ -188,9 +189,9 @@ def get_grouped_unknown_questions_embedding():
         conn = mysql.connector.connect(**MYSQL_CONFIG)
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT id, content AS cauhoi 
+            SELECT id, role, content AS cauhoi 
             FROM chat_history 
-            WHERE danhmuc = 0 AND role = 'user' AND id NOT IN (SELECT chat_history_id FROM mapping_data)
+            WHERE danhmuc = 0 AND id NOT IN (SELECT chat_history_id FROM mapping_data)
         """)
         rows = cursor.fetchall()
         conn.close()
@@ -202,11 +203,14 @@ def get_grouped_unknown_questions_embedding():
         return {"groups": []}
 
     # Encode tất cả câu hỏi
-    questions = [row["cauhoi"] for row in rows]
+    questions = [row["cauhoi"] for row in rows if row['role'] == 'user']
+    answers = [row["cauhoi"] for row in rows if row['role'] == 'assistant']
     embeddings = embedding_model.encode(questions)
+    # answer_embeddings = embedding_model.encode(answers)
+    new_rows = [row for row in rows if row['role'] == 'user']
 
     groups = []
-    for idx, record in enumerate(rows):
+    for idx, record in enumerate(new_rows):
         matched_index = None
         best_score = 0.0
         for i, group in enumerate(groups):
@@ -227,7 +231,8 @@ def get_grouped_unknown_questions_embedding():
                 "representative": record["cauhoi"],
                 "count": 1,
                 "ids": [record["id"]],
-                "embedding": embeddings[idx]
+                "embedding": embeddings[idx],
+                "answers" : answers[idx]
             })
 
     # Loại bỏ embedding trước khi return
@@ -236,7 +241,8 @@ def get_grouped_unknown_questions_embedding():
         result.append({
             "representative": group["representative"],
             "count": group["count"],
-            "ids": group["ids"]
+            "ids": group["ids"],
+            "answers": group["answers"]
         })
 
     return {"groups": result}

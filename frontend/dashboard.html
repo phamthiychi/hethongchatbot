@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Bản điều khiển</title>
+  <title>AdminTruongTieuhocHuynhManDat</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="style.css">
@@ -25,15 +25,15 @@ fetch("/menu.html")
       <h5 class="card-title text-dark">📈 Tổng quan hệ thống</h5>
       <div class="row text-center text-dark">
         <div class="col-md-4">
-          <h6>🔁 Số phiên</h6>
+          <h6>🔁 Lượt truy cập người dùng</h6>
           <p id="statSessions" class="fw-bold fs-5">...</p>
         </div>
         <div class="col-md-4">
-          <h6>💬 Số câu hỏi</h6>
+          <h6>💬 Lượt tra cứu câu hỏi</h6>
           <p id="statQuestions" class="fw-bold fs-5">...</p>
         </div>
         <div class="col-md-4">
-          <h6>🎯 Hiệu quả</h6>
+          <h6>🎯 Hiệu suất phản hồi từ hệ thống</h6>
           <p id="statEffectiveness" class="fw-bold fs-5 text-success">...</p>
         </div>
       </div>
@@ -41,48 +41,50 @@ fetch("/menu.html")
   </div>
 </div>
 
-  <div class="container col-md-8 form-container">
-    <span class="navbar-brand">📊 Thống kê Chat History</span>
-  </div>
-
-
-<div class="container mt-4">
-  <div class="row justify-content-center g-3 gx-5"> 
-    <div class="col-4">
-      <div class="card shadow">
-        <div class="card-body">
-          <canvas id="categoryChartuser"></canvas>
+<div class="container col-md-10 form-container">
+  <div class="card shadow">
+    <div class="card-body">
+      <h5 class="card-title text-dark">📊 Thống kê lịch sử trò chuyện</h5>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <canvas id="categoryChartuser"></canvas>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-    <div class="col-4">
-      <div class="card shadow">
-        <div class="card-body">
-          <canvas id="categoryChartassistant"></canvas>
+        <div class="col-md-6">
+          <div class="card shadow">
+            <div class="card-body">
+              <canvas id="categoryChartassistant"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-<div class="container col-md-8 form-container">
+
+<div class="container col-md-10 form-container my-2">
   <div class="card shadow">
     <div class="card-body">
-      <h5 class="card-title text-dark">📊 Số lượng câu hỏi theo giờ</h5>
+      <h5 class="card-title text-dark">📊 Số lượng câu hỏi tra cứu hàng ngày</h5>
       <canvas id="chatCountByHourChart"></canvas>
     </div>
   </div>
 </div>
-<!-- Table hiển thị nhóm câu cần xác thực -->
-<div class="container mt-4">
+<!-- Table hiển thị nhóm câu trả lời từ Chat GPT cần xác thực -->
+<div class="container col-md-10 form-container my-2">
   <div class="card shadow">
     <div class="card-body">
-      <h5 class="card-title text-dark">📋 Câu cần xác thực</h5>
+      <h5 class="card-title text-dark">📋 Câu trả lời của trợ lý Chat GPT cần được xác minh lại</h5>
       <table class="table table-hover mt-3">
         <thead class="table-light">
           <tr class="card-body text-dark">
-            <th>Đại diện</th>
+            <th>Câu hỏi</th>
+            <th>Câu trả lời đề xuất</th>
             <th>Số lần xuất hiện</th>
-            <th>Hành động</th>
+            <th>Thao tác</th>
           </tr>
         </thead>
         <tbody id="groupsTable"></tbody>
@@ -94,7 +96,7 @@ fetch("/menu.html")
 <div class="modal" id="addQuestionModal">
   <div class="modal-dialog">
     <div class="modal-content p-3 text-dark">
-      <h5>➕ Thêm câu hỏi</h5>
+      <h5>✔️ Xác minh câu trả lời</h5>
       <div class="mb-3">
         <label>Danh mục ID</label>
         <select id="danhmuc" class="form-select"></select>
@@ -104,7 +106,11 @@ fetch("/menu.html")
         <input id="cauhoiInput" class="form-control" readonly />
       </div>
       <div class="mb-3">
-        <label>Câu trả lời</label>
+        <label>Câu trả lời đề xuất</label>
+        <input id="cautraloidexuatInput" class="form-control" readonly />
+      </div>
+      <div class="mb-3">
+        <label>Câu trả lời xác minh</label>
         <textarea id="cautraloiInput" class="form-control"></textarea>
       </div>
       <div class="text-end">
@@ -113,10 +119,6 @@ fetch("/menu.html")
     </div>
   </div>
 </div>
-
-
-
-
 
 <!-- Scripts -->
  <script>
@@ -132,16 +134,18 @@ async function fetchSummaryStats() {
 async function fetchChatUser() {
     const response = await fetch("/api/getchatuser");
     const data = await response.json();
+    const cleanedData = data.filter(item => item.category !== null);
+    const dataWithId = cleanedData.map((item, index) => ({ id: index + 3, ...item}));
 
     // 2️⃣ Render Pie Chart
     const ctx = document.getElementById("categoryChartuser").getContext("2d");
     new Chart(ctx, {
       type: "pie",
       data: {
-        labels: data.map(d => d.category),
+        labels: dataWithId.map(d => d.category),
         datasets: [{
-          data: data.map(d => d.count),
-          backgroundColor: data.map(() => randomColor())
+          data: dataWithId.map(d => d.count),
+          backgroundColor: dataWithId.map(d => createColor(d.id))
         }]
       },
       options: {
@@ -160,16 +164,18 @@ async function fetchChatUser() {
   async function fetchChatAssistant() {
     const response = await fetch("/api/getchatassistant");
     const data = await response.json();
+    const cleanedData = data.filter(item => item.category !== null);
+    const dataWithId = cleanedData.map((item, index) => ({ id: index + 3, ...item}));
 
     // 2️⃣ Render Pie Chart
     const ctx = document.getElementById("categoryChartassistant").getContext("2d");
     new Chart(ctx, {
       type: "pie",
       data: {
-        labels: data.map(d => d.category),
+        labels: dataWithId.map(d => d.category),
         datasets: [{
-          data: data.map(d => d.count),
-          backgroundColor: data.map(() => randomColor())
+          data: dataWithId.map(d => d.count),
+          backgroundColor: dataWithId.map(d => createColor(d.id))
         }]
       },
       options: {
@@ -180,6 +186,18 @@ async function fetchChatUser() {
           },
           legend: {
             position: "bottom"
+          },
+          datalabels: {
+            formatter: (value, context) => {
+              const sum = context.chart._metasets[0].total;
+              const percentage = (value / sum) * 100;
+              return `${percentage.toFixed(0)}%`;  // hiển thị 0%, 25%, 75%...
+            },
+            color: "#000",
+            font: {
+              weight: "bold",
+              size: 14
+            }
           }
         }
       }
@@ -196,16 +214,18 @@ async function loadGroups() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${group.representative}</td>
+      <td>${group.answers}</td>
       <td>${group.count}</td>
-      <td><button class="btn btn-success btn-sm" onClick="openAddModal('${encodeURIComponent(group.representative)}', ${JSON.stringify(group.ids)})">➕ Thêm</button></td>
+      <td><button class="btn bg-white fs-5 d-flex justify-content-center align-items-center" onClick="openAddModal('${encodeURIComponent(group.representative)}', '${encodeURIComponent(group.answers)}', ${JSON.stringify(group.ids)})">✔️ Xác minh</button></td>
     `;
     tableBody.appendChild(tr);
   });
 }
 
-function openAddModal(representative, ids) {
+function openAddModal(representative, answers, ids) {
   currentGroup = ids;
   document.getElementById("cauhoiInput").value = decodeURIComponent(representative);
+  document.getElementById("cautraloidexuatInput").value = decodeURIComponent(answers);
   const modal = new bootstrap.Modal(document.getElementById("addQuestionModal"));
   modal.show();
 }
@@ -213,9 +233,10 @@ function openAddModal(representative, ids) {
 document.getElementById("saveButton").addEventListener("click", async () => {
   const danhmuc = document.getElementById("danhmuc").value.trim();
   const cauhoi = document.getElementById("cauhoiInput").value.trim();
+  const cauhoidexuat = document.getElementById("cautraloidexuatInput").value.trim();
   const cautraloi = document.getElementById("cautraloiInput").value.trim();
 
-  if (!danhmuc || !cauhoi || !cautraloi) {
+  if (!danhmuc || !cauhoi || !cautraloi || !cauhoidexuat) {
     alert("Vui lòng nhập đủ thông tin");
     return;
   }
@@ -236,11 +257,24 @@ document.getElementById("saveButton").addEventListener("click", async () => {
   }
 });
 async function fetchChatCountByHour() {
-  const resp = await fetch("/api/chat_count_by_hour");
+  const resp = await fetch("/api/chat_count_by_day");
   const data = await resp.json();
 
-  const hours = data.map(d => d.hour + "h");
-  const counts = data.map(d => d.count);
+  const formattedData = data.map((item, index) => {
+    const d = new Date(item.date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2); // lấy 2 chữ số cuối
+
+    return {
+      id: index + 4,
+      date: `${day}/${month}/${year}`,
+      count: item.count
+    };
+  });
+
+  const hours = formattedData.map(d => d.date);
+  const counts = formattedData.map(d => d.count);
 
   const ctx = document.getElementById("chatCountByHourChart").getContext("2d");
   new Chart(ctx, {
@@ -250,14 +284,14 @@ async function fetchChatCountByHour() {
       datasets: [{
         label: "Số câu hỏi",
         data: counts,
-        backgroundColor: data.map(() => randomColor()),
+        backgroundColor: formattedData.map(d => createColor(d.id)),
       }]
     },
     options: {
       plugins: {
         title: {
           display: true,
-          text: "Số lượng câu hỏi theo giờ trong ngày"
+          text: "Số lượng câu hỏi theo ngày"
         },
         legend: {
           display: false
@@ -269,7 +303,7 @@ async function fetchChatCountByHour() {
           beginAtZero: true
         },
         x: {
-          title: { display: true, text: "Giờ trong ngày" }
+          title: { display: true, text: "Thời gian" }
         }
       }
     }

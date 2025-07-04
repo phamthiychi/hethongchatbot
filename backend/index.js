@@ -269,13 +269,13 @@ app.post("/api/add_question_from_group", (req, res) => {
     }
   );
 });
-app.get("/api/chat_count_by_hour", (req, res) => {
+app.get("/api/chat_count_by_day", (req, res) => {
   db.query(
-    `SELECT HOUR(created_at) AS hour, COUNT(*) AS count
-     FROM chat_history
-     WHERE role = 'user'
-     GROUP BY HOUR(created_at)
-     ORDER BY HOUR(created_at)`,
+    `SELECT DATE(created_at) AS date, COUNT(*) AS count
+        FROM chat_history
+        WHERE role = 'user'
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at);`,
     (err, results) => {
       if (err) {
         return res.status(500).send(err);

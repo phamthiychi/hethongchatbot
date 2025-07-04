@@ -31,7 +31,7 @@
   const widget = document.createElement("div");
   widget.id = "chatbot-widget";
   widget.innerHTML = `
-    <div id="chatbot-widget-header">🤖 AI Chatbot</div>
+    <div id="chatbot-widget-header">🤖 Chatbot HocTap</div>
     <div id="chatbot-widget-messages"></div>
     <div id="chatbot-widget-input">
       <input type="text" placeholder="Nhập câu hỏi..." />
@@ -45,7 +45,7 @@
   const messagesDiv = widget.querySelector("#chatbot-widget-messages");
 
   let messageHistory = [
-    { role: "system", content: "Bạn là một trợ lý AI thân thiện, nhớ bối cảnh và tên người dùng nếu họ cung cấp." }
+    { role: "system", content: "Bạn là một trợ lý AI thân thiện." }
   ];
 
   async function loadHistory() {

@@ -386,8 +386,8 @@ function animateCount(element, endValue, duration = 1000, suffix = "") {
     if (start >= endValue) clearInterval(timer);
   }, stepTime);
 }
-function randomColor() {
-  const hex = Math.floor(Math.random() * 16777215).toString(16);
+function createColor(id) {
+  const hex = Math.floor(id * 0.01 * 16777215).toString(16);
   return '#' + hex.padStart(6, '0');
 }
   
