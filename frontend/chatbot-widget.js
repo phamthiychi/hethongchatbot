@@ -8,7 +8,7 @@
     localStorage.setItem("chat_session_id", sessionId);
   }
 
-  const style = document.createElement("style");
+  const style = document.getElementById("chat");
   style.innerHTML = `
     #chatbot-toggle { position: fixed; bottom: 24px; right: 24px; background: #0d6efd; color: white; border: none; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; cursor: pointer; z-index: 9998; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     #chatbot-widget { position: fixed; bottom: 100px; right: 24px; width: 360px; height: 520px; background: white; border-radius: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 9999; font-family: "Segoe UI", sans-serif; overflow: hidden; }
@@ -31,7 +31,7 @@
   const widget = document.createElement("div");
   widget.id = "chatbot-widget";
   widget.innerHTML = `
-    <div id="chatbot-widget-header">🤖 Chatbot HocTap</div>
+    <div id="chatbot-widget-header">Chatbot</div>
     <div id="chatbot-widget-messages"></div>
     <div id="chatbot-widget-input">
       <input type="text" placeholder="Nhập câu hỏi..." />

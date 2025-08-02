@@ -1,5 +1,7 @@
 import os
 import logging
+import re
+
 from dotenv import load_dotenv
 from openai import OpenAI
 from fastapi import FastAPI, Request
@@ -18,6 +20,9 @@ embedding_model = SentenceTransformer('all-mpnet-base-v2')
 # Load .env
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+REJECT_MESSAGE = "Xin lỗi! Hiện tại tôi chưa thể trả lời câu hỏi của bạn do kiến thức nằm ngoài dữ liệu tôi đang có.\n" \
+                 "Vui lòng đợi hệ thống cập nhật hoặc liên hệ giáo viên Tin học của trường để được giải đáp.\n" \
+                 " Xin cảm ơn!"
 
 # MySQL config
 MYSQL_CONFIG = {
@@ -60,31 +65,94 @@ def get_cached_qa_pairs():
         logger.error(f"❌ DB load error: {e}")
         return []
 
-def get_vectorizer_and_matrix():
-    qa_pairs = get_cached_qa_pairs()
-    questions = [q for q, _, _ in qa_pairs]
+def get_vectorizer_and_matrix(qa_pairs, is_answer = False):
+    # qa_pairs = get_cached_qa_pairs()
+    data = [q.lower() for q, _, _ in qa_pairs]
+    if is_answer:
+        data = [a.lower() for _, a, _ in qa_pairs] 
     vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(questions)
+    tfidf_matrix = vectorizer.fit_transform(data)
     return vectorizer, tfidf_matrix
 
-def find_best_match(query, qa_pairs, threshold=0.5):
+def find_best_match(query, qa_pairs, is_answer = False):
     if not qa_pairs:
         return None, 0.0, None
-    vectorizer, tfidf_matrix = get_vectorizer_and_matrix()
-    query_vec = vectorizer.transform([query])
+    vectorizer, tfidf_matrix = get_vectorizer_and_matrix(qa_pairs, is_answer=is_answer)
+    query_vec = vectorizer.transform([query.lower()])
     sims = cosine_similarity(query_vec, tfidf_matrix).flatten()
     idx = sims.argmax()
     score = sims[idx]
-    return qa_pairs[idx][1], score, idx
+    new_request = [{'role': 'user', 'content': f'Chuyển câu hỏi và câu trả lời sau thành một câu trần thuật hoàn chỉnh và tự nhiên: "Câu hỏi: {qa_pairs[idx][0]} - Trả lời: {qa_pairs[idx][1]}"'}]
+    completion = client.chat.completions.create(model="gpt-4o-mini", messages=new_request)
+    answer = completion.choices[0].message.content
+    return answer, score, idx
 
-def find_best_match_for_single(query, candidate, threshold=0.5):
-    """So sánh query với một candidate duy nhất bằng cosine similarity."""
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform([query, candidate])
-    sims = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2]).flatten()
-    score = sims[0]
-    return candidate, score
+# def find_best_match_for_single(query, candidate, threshold=0.5):
+#     """So sánh query với một candidate duy nhất bằng cosine similarity."""
+#     vectorizer = TfidfVectorizer()
+#     tfidf_matrix = vectorizer.fit_transform([query, candidate])
+#     sims = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2]).flatten()
+#     score = sims[0]
+#     return candidate, score
 
+def verify_answer_generated(session_id, reply, user_message, context, qa_pairs):
+    final_answer = REJECT_MESSAGE
+    answer, score, matched_index = find_best_match(reply, qa_pairs, is_answer = True)
+    print(f"%%%%%% {2 + score} %%%%%%%%")
+    if score >= 0.3:
+        final_answer = aggregate_information(context, answer, user_message)
+        score_h = hallucination_score(final_answer, answer)
+    else:
+        score_h = 0
+    if score_h >= 0.6:
+        final_answer = REJECT_MESSAGE
+    print(f"~~~~~~ generate answer {reply} ~~~~~~~~")
+    print(f"~~~~~~ answer từ hệ thống {answer} ~~~~~~~~")
+    save_message_to_db(session_id, "user", user_message, danhmuc=0, hallucination_score = score_h)
+    save_message_to_db(session_id, "assistant", final_answer, danhmuc=0, hallucination_score = score_h)
+
+    return final_answer, score
+
+def aggregate_information(context, answer, user_message):
+    msg = f'Dựa vào thông tin "{answer}" được gợi ý từ hệ thống.' \
+          f' Hãy đưa ra phản hồi cho câu hỏi "{user_message}", chỉ nêu trả lời đúng trọng tâm câu hỏi, không phân tích hay giải thích gì thêm'
+    new_request = {'role': 'user', 'content': msg}
+    context = context[:-1] + [new_request]
+    completion = client.chat.completions.create(model="gpt-4o-mini", messages=context)
+    reply = completion.choices[0].message.content
+    print(f"##################### aggregate_information answer từ hệ thống: {answer} #####################")
+    print(f"...........aggregate_informa answer cuối cùng: {reply} .....................")
+    return reply
+
+def split_sentences(text):
+    # Tách câu đơn giản bằng dấu chấm, chấm hỏi, chấm than
+    sentences = re.split(r'(?<=[.!?])\s+|\n+', text.strip())
+    return [s.lower() for s in sentences if s]
+
+def hallucination_score(final_answer, core_answer):
+    sentences = split_sentences(final_answer)
+    
+    # Nếu chỉ có 1 câu, xử lý như cũ
+    if len(sentences) == 1:
+        vectorizer = TfidfVectorizer()
+        vectorizer.fit([final_answer.lower(), core_answer.lower()])
+        final_vec = vectorizer.transform([final_answer.lower()])
+        core_vec = vectorizer.transform([core_answer.lower()])
+        similarity = cosine_similarity(final_vec, core_vec)[0][0]
+        return float(1 - similarity)
+    
+    # Nếu có nhiều câu, so sánh từng câu với core_answer
+    similarities = []
+    for sent in sentences:
+        vectorizer = TfidfVectorizer()
+        vectorizer.fit([sent.lower(), core_answer.lower()])
+        sent_vec = vectorizer.transform([sent.lower()])
+        core_vec = vectorizer.transform([core_answer.lower()])
+        sim = cosine_similarity(sent_vec, core_vec)[0][0]
+        similarities.append(sim)
+
+    max_sim = max(similarities)
+    return float(1 - max_sim)
 
 # def save_message_to_db(session_id: str, role: str, content: str):
 #     try:
@@ -98,7 +166,7 @@ def find_best_match_for_single(query, candidate, threshold=0.5):
 #         conn.close()
 #     except Exception as e:
 #         logger.error(f"❌ DB save error: {e}")
-def save_message_to_db(session_id: str, role: str, content: str, danhmuc: int = 0):
+def save_message_to_db(session_id: str, role: str, content: str, danhmuc: int = 0, hallucination_score: float = 0):
     """
     Lưu tin nhắn cùng danhmuc vào bảng chat_history.
     danhmuc = 0 nếu câu trả lời ngoài knowledge base (từ GPT).
@@ -108,10 +176,10 @@ def save_message_to_db(session_id: str, role: str, content: str, danhmuc: int = 
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO chat_history (session_id, role, content, danhmuc) 
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO chat_history (session_id, role, content, danhmuc, hallucination_score) 
+            VALUES (%s, %s, %s, %s, %s)
             """,
-            (session_id, role, content, danhmuc),
+            (session_id, role, content, danhmuc, hallucination_score),
         )
         conn.commit()
         conn.close()
@@ -156,29 +224,32 @@ async def chat(payload: ChatPayload, request: Request):
 
     # Lưu tin nhắn user
     #save_message_to_db(session_id, "user", user_message)
-
-    if score >= 0.5:
+    print(f"\n\n Start new session \n\n")
+    print(f"%%%%%% {1 + score} %%%%%%%%")
+    if score >= 0.6:
         # Khi match được trong knowledge base
-        matched_index = None
-        vectorizer, tfidf_matrix = get_vectorizer_and_matrix()
-        sims = cosine_similarity(vectorizer.transform([user_message]), tfidf_matrix).flatten()
-        matched_index = sims.argmax()
+        # matched_index = None
+        # vectorizer, tfidf_matrix = get_vectorizer_and_matrix()
+        # sims = cosine_similarity(vectorizer.transform([user_message]), tfidf_matrix).flatten()
+        # matched_index = sims.argmax()
         danhmuc = qa_pairs[matched_index][2] if matched_index is not None and len(qa_pairs[matched_index]) > 2 else 0
-        save_message_to_db(session_id, "user", user_message, danhmuc=danhmuc)
-        save_message_to_db(session_id, "assistant", answer, danhmuc=danhmuc)
-        return {"response": answer, "source": "knowledge_base", "similarity": round(score, 2)}
+        context = payload.messages[-3:] if len(payload.messages) > 3 else payload.messages
+        final_answer = aggregate_information(context, answer, user_message)
+        score_h = hallucination_score(final_answer, answer)
+        if score_h >= 0.6:
+            final_answer = REJECT_MESSAGE
+        save_message_to_db(session_id, "user", user_message, danhmuc=danhmuc, hallucination_score = score_h)
+        save_message_to_db(session_id, "assistant", final_answer, danhmuc=danhmuc, hallucination_score = score_h)
+        return {"response": final_answer, "source": "knowledge_base", "similarity": round(score, 2)}
     else:
         # Khi GPT tạo câu trả lời
         try:
             context = payload.messages[-3:] if len(payload.messages) > 3 else payload.messages
-            print(context)
+            print(f"=============================context: {context}==========================")
             completion = client.chat.completions.create(model="gpt-4o-mini", messages=context)
-
             reply = completion.choices[0].message.content
-            save_message_to_db(session_id, "user", user_message, danhmuc=0)
-            save_message_to_db(session_id, "assistant", reply, danhmuc=0)
-
-            return {"response": reply, "source": "gpt", "similarity": round(score, 2)}
+            final_answer, score = verify_answer_generated(session_id, reply, user_message, context, qa_pairs)
+            return {"response": final_answer, "source": "gpt", "similarity": round(score, 2)}
         except Exception as e:
             logger.error(f"❌ GPT error: {e}")
             return {"response": f"❌ Lỗi khi gọi GPT: {e}", "source": "error"}

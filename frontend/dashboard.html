@@ -5,13 +5,27 @@
   <title>AdminTruongTieuhocHuynhManDat</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <script src="/main.js"></script>
   <script src="./bootstrap.bundle.min.js"></script>
+  <style>
+    .scroll-table {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+    }
+    .scroll-table thead th {
+      position: sticky;
+      top: 0;
+      background-color: #f8f9fa;
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
-  <div id="menuContainer"></div> <!-- Nơi menu sẽ được nhét vào -->
-
+  <div id="menuContainer"></div>
 <script>
 fetch("/menu.html")
   .then(response => response.text())
@@ -19,6 +33,7 @@ fetch("/menu.html")
     document.getElementById("menuContainer").innerHTML = data;
   });
 </script>
+
 <div class="container mt-4">
   <div class="card shadow">
     <div class="card-body">
@@ -41,22 +56,16 @@ fetch("/menu.html")
   </div>
 </div>
 
+<!-- ✅ BIỂU ĐỒ TRÒN TO LÊN MỘT CHÚT -->
 <div class="container col-md-10 form-container">
   <div class="card shadow">
     <div class="card-body">
       <h5 class="card-title text-dark">📊 Thống kê lịch sử trò chuyện</h5>
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-12">
           <div class="card shadow">
-            <div class="card-body">
-              <canvas id="categoryChartuser"></canvas>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card shadow">
-            <div class="card-body">
-              <canvas id="categoryChartassistant"></canvas>
+            <div class="card-body p-3" style="max-height: 720px; display: flex; justify-content: center; align-items: center;">
+              <canvas id="categoryChartassistant" height="300"></canvas>
             </div>
           </div>
         </div>
@@ -69,11 +78,22 @@ fetch("/menu.html")
   <div class="card shadow">
     <div class="card-body">
       <h5 class="card-title text-dark">📊 Số lượng câu hỏi tra cứu hàng ngày</h5>
-      <canvas id="chatCountByHourChart"></canvas>
+      <canvas id="chatCountByHourChart" height="100"></canvas>
+      <div class="scroll-table w-75 mx-auto mt-4">
+        <table class="table table-sm table-striped table-bordered table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Ngày</th>
+              <th>Số câu hỏi</th>
+            </tr>
+          </thead>
+          <tbody id="chatCountTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
-<!-- Table hiển thị nhóm câu trả lời từ Chat GPT cần xác thực -->
+
 <div class="container col-md-10 form-container my-2">
   <div class="card shadow">
     <div class="card-body">
@@ -92,7 +112,7 @@ fetch("/menu.html")
     </div>
   </div>
 </div>
-<!-- Modal nhập chi tiết -->
+
 <div class="modal" id="addQuestionModal">
   <div class="modal-dialog">
     <div class="modal-content p-3 text-dark">
@@ -120,89 +140,58 @@ fetch("/menu.html")
   </div>
 </div>
 
-<!-- Scripts -->
- <script>
+<script>
 let currentGroup = null;
 async function fetchSummaryStats() {
   const res = await fetch("/api/chat_summary");
   const data = await res.json();
-
   animateCount(document.getElementById("statSessions"), data.total_sessions);
   animateCount(document.getElementById("statQuestions"), data.total_questions);
   animateCount(document.getElementById("statEffectiveness"), Math.round(data.effectiveness), 1000, "%");
 }
-async function fetchChatUser() {
-    const response = await fetch("/api/getchatuser");
-    const data = await response.json();
-    const cleanedData = data.filter(item => item.category !== null);
-    const dataWithId = cleanedData.map((item, index) => ({ id: index + 3, ...item}));
 
-    // 2️⃣ Render Pie Chart
-    const ctx = document.getElementById("categoryChartuser").getContext("2d");
-    new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels: dataWithId.map(d => d.category),
-        datasets: [{
-          data: dataWithId.map(d => d.count),
-          backgroundColor: dataWithId.map(d => createColor(d.id))
-        }]
-      },
-      options: {
-        plugins: {
-          title: {
-            display: true,
-            text: "Tỉ lệ câu hỏi người dùng theo danh mục"
+async function fetchChatAssistant() {
+  const response = await fetch("/api/getchatassistant");
+  const data = await response.json();
+  const cleanedData = data.filter(item => item.category !== null);
+  const dataWithId = cleanedData.map((item, index) => ({ id: index + 3, ...item }));
+
+  const ctx = document.getElementById("categoryChartassistant").getContext("2d");
+  new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: dataWithId.map(d => d.category),
+      datasets: [{
+        data: dataWithId.map(d => d.count),
+        backgroundColor: dataWithId.map(d => createColor(d.id))
+      }]
+    },
+    plugins: [ChartDataLabels],
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: "Tỉ lệ câu trả lời theo danh mục"
+        },
+        legend: {
+          position: "bottom"
+        },
+        datalabels: {
+          formatter: (value, context) => {
+            const sum = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            const percentage = (value / sum) * 100;
+            return `${percentage.toFixed(0)}%`;
           },
-          legend: {
-            position: "bottom"
+          color: "#000",
+          font: {
+            weight: "bold",
+            size: 14
           }
         }
       }
-    });
-  }
-  async function fetchChatAssistant() {
-    const response = await fetch("/api/getchatassistant");
-    const data = await response.json();
-    const cleanedData = data.filter(item => item.category !== null);
-    const dataWithId = cleanedData.map((item, index) => ({ id: index + 3, ...item}));
-
-    // 2️⃣ Render Pie Chart
-    const ctx = document.getElementById("categoryChartassistant").getContext("2d");
-    new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels: dataWithId.map(d => d.category),
-        datasets: [{
-          data: dataWithId.map(d => d.count),
-          backgroundColor: dataWithId.map(d => createColor(d.id))
-        }]
-      },
-      options: {
-        plugins: {
-          title: {
-            display: true,
-            text: "Tỉ lệ câu trả lời theo danh mục"
-          },
-          legend: {
-            position: "bottom"
-          },
-          datalabels: {
-            formatter: (value, context) => {
-              const sum = context.chart._metasets[0].total;
-              const percentage = (value / sum) * 100;
-              return `${percentage.toFixed(0)}%`;  // hiển thị 0%, 25%, 75%...
-            },
-            color: "#000",
-            font: {
-              weight: "bold",
-              size: 14
-            }
-          }
-        }
-      }
-    });
-  }
+    }
+  });
+}
 
 async function loadGroups() {
   const API_URL = "http://localhost:8000";
@@ -256,51 +245,52 @@ document.getElementById("saveButton").addEventListener("click", async () => {
     alert(result.message || "❌ Lỗi khi thêm");
   }
 });
+
 async function fetchChatCountByHour() {
   const resp = await fetch("/api/chat_count_by_day");
   const data = await resp.json();
-
   const formattedData = data.map((item, index) => {
     const d = new Date(item.date);
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2); // lấy 2 chữ số cuối
-
-    return {
-      id: index + 4,
-      date: `${day}/${month}/${year}`,
-      count: item.count
-    };
+    const year = String(d.getFullYear()).slice(-2);
+    return { id: index + 4, date: `${day}/${month}/${year}`, count: item.count };
   });
 
-  const hours = formattedData.map(d => d.date);
+  const labels = formattedData.map(d => d.date);
   const counts = formattedData.map(d => d.count);
+  const ctx = document.getElementById("chatCountByHourChart")?.getContext("2d");
+  if (!ctx) return;
 
-  const ctx = document.getElementById("chatCountByHourChart").getContext("2d");
   new Chart(ctx, {
-    type: "bar",
+    type: "line",
     data: {
-      labels: hours,
+      labels: labels,
       datasets: [{
         label: "Số câu hỏi",
         data: counts,
-        backgroundColor: formattedData.map(d => createColor(d.id)),
+        borderColor: "rgba(13, 110, 253, 0.5)",
+        backgroundColor: "rgba(13, 110, 253, 0.08)",
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: "rgba(13, 110, 253, 0.5)"
       }]
     },
     options: {
       plugins: {
         title: {
           display: true,
-          text: "Số lượng câu hỏi theo ngày"
+          text: "📊 Số lượng câu hỏi theo ngày"
         },
         legend: {
-          display: false
+          display: true
         }
       },
       scales: {
         y: {
-          title: { display: true, text: "Số câu" },
-          beginAtZero: true
+          beginAtZero: true,
+          title: { display: true, text: "Số câu" }
         },
         x: {
           title: { display: true, text: "Thời gian" }
@@ -308,12 +298,28 @@ async function fetchChatCountByHour() {
       }
     }
   });
+
+  const tableBody = document.getElementById("chatCountTableBody");
+  if (tableBody) {
+    tableBody.innerHTML = "";
+    formattedData.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${row.date}</td><td>${row.count}</td>`;
+      tableBody.appendChild(tr);
+    });
+  }
 }
-// Khi load trang\
+
+// 🎨 Tạo màu dịu mắt dạng HSL cho biểu đồ tròn
+function createColor(id) {
+  const hue = (id * 137.5) % 360;
+  return `hsl(${hue}, 60%, 80%)`;
+}
+
+// ✅ Gọi các hàm cần thiết
 fetchSummaryStats();
 fetchChatCountByHour();
 loadDanhMuc();
-fetchChatUser();
 fetchChatAssistant();
 loadGroups();
 </script>

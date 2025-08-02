@@ -29,6 +29,7 @@ CREATE TABLE `chat_history` (
   `content` text NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `danhmuc` int NOT NULL,
+  `hallucination_score` float NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=79 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci	;
 
